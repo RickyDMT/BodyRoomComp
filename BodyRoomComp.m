@@ -132,8 +132,8 @@ end
 
     BRC.var.jit = reshape(BalanceTrials(STIM.totes,1,[STIM.jit]),STIM.trials,STIM.blocks);
 
-    BRC.data.rt = zeros(STIM.blocks,1);
-    BRC.data.anx_rate = zeros(STIM.blocks,1);
+    BRC.data.rt = NaN(STIM.blocks,1);
+    BRC.data.anx_rate = NaN(STIM.blocks,1);
     BRC.data.info.ID = ID;
 %     BRC.data.info.cond = COND;               %Condtion 1 = Food; Condition 2 = animals
 %     BRC.data.info.session = SESS;
