@@ -85,18 +85,10 @@ cd(imgdir);
 
 
 PICS =struct;
- if COND == 1;                   %Condtion = 1 is food. 
     % Update for appropriate pictures.
      PICS.in.avg = dir('Healthy*');
      PICS.in.thin = dir('Unhealthy*');
-%     PICS.in.avg = dir('Avg*');
-%     PICS.in.thin = dir('Thin*');
-%     PICS.in.neut = dir('*water*.jpg');
- elseif COND == 2;               %Condition = 2 is not food (birds/flowers)
-     PICS.in.avg = dir('Bird*');
-     PICS.in.thin = dir('Flower*');
-%     PICS.in.neut = dir('*mam*.jpg');
- end
+
 % picsfields = fieldnames(PICS.in);
 
 %Check if pictures are present. If not, throw error.
@@ -153,20 +145,6 @@ end
 commandwindow;
 
 %%
-% %% Sound stuff.
-% wave=sin(1:0.25:1000);
-% freq=22254;  % change this to change freq of tone
-% nrchannels = size(wave,1);
-% % Default to auto-selected default output device:
-% deviceid = -1;
-% % Request latency mode 2, which used to be the best one in our measurement:
-% reqlatencyclass = 2; % class 2 empirically the best, 3 & 4 == 2
-% % Initialize driver, request low-latency preinit:
-% InitializePsychSound(1);
-% % Open audio device for low-latency output:
-% pahandle = PsychPortAudio('Open', deviceid, [], reqlatencyclass, freq, nrchannels);
-
-%%
 %change this to 0 to fill whole screen
 DEBUG=0;
 
@@ -209,3 +187,18 @@ Screen('TextFont', w, 'Arial');
 Screen('TextSize',w,30);
 
 KbName('UnifyKeyNames');
+%%
+%% Initial screen
+DrawFormattedText(w,'This is a task!\nPress any key to continue.','center','center',COLORS.WHITE,[],[],[],1.5);
+Screen('Flip',w);
+KbWait();
+Screen('Flip',w);
+WaitSecs(1);
+
+%% Instructions
+instruct = sprintf('This is where instructions will go.'); %sprintf('You will see pictures on the left & right side of the screen, followed by a dot on the left or right side of the screen.\n\nPress the "%s" if the dot is on the left side of the screen or "%s" if the dot is on right side of the screen\n\nPress any key to continue.',KbName(KEY.left),KbName(KEY.right));
+DrawFormattedText(w,instruct,'center','center',COLORS.WHITE,60,[],[],1.5);
+Screen('Flip',w);
+KbWait();
+
+
