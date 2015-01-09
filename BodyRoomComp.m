@@ -3,7 +3,7 @@
 function BodyRoomComp(varargin)
 
 
-global KEY COLORS w wRect XCENTER YCENTER PICS STIM DPB trial pahandle
+global KEY COLORS w wRect XCENTER YCENTER PICS STIM BRC pahandle
 
 prompt={'SUBJECT ID' 'Condition' 'Session (1, 2, or 3)' 'Practice? 0 or 1'};
 defAns={'4444' '1' '1' '0'};
@@ -14,16 +14,6 @@ ID=str2double(answer{1});
 COND = str2double(answer{2});
 SESS = str2double(answer{3});
 prac = str2double(answer{4});
-
-%Make sure input data makes sense.
-% try
-%     if SESS > 1;
-%         %Find subject data & make sure same condition.
-%         
-%     end
-% catch
-%     error('Subject ID & Condition code do not match.');
-% end
 
 
 rng(ID); %Seed random number generator with subject ID
@@ -46,9 +36,10 @@ COLORS.rect = COLORS.GREEN;
 
 STIM = struct;
 STIM.blocks = 6;
-STIM.trials = 20;
+STIM.trials = 10;
 STIM.totes = STIM.blocks*STIM.trials;
-STIM.trialdur = 1.250;
+STIM.trialdur = 3;
+STIM.jit = [.5 1 1.5];
 
 
 %% Find & load in pics
@@ -84,87 +75,66 @@ cd(imgdir);
  
 
 
-PICS =struct;
- if COND == 1;                   %Condtion = 1 is food. 
     % Update for appropriate pictures.
-     PICS.in.avg = dir('Healthy*');
-     PICS.in.thin = dir('Unhealthy*');
-%     PICS.in.avg = dir('Avg*');
-%     PICS.in.thin = dir('Thin*');
-%     PICS.in.neut = dir('*water*.jpg');
- elseif COND == 2;               %Condition = 2 is not food (birds/flowers)
-     PICS.in.avg = dir('Bird*');
-     PICS.in.thin = dir('Flower*');
-%     PICS.in.neut = dir('*mam*.jpg');
- end
-% picsfields = fieldnames(PICS.in);
+     PICS.in.B = dir('*_T*');
+     PICS.in.R = dir('room*');
 
 %Check if pictures are present. If not, throw error.
 %Could be updated to search computer to look for pics...
-if isempty(PICS.in.avg) || isempty(PICS.in.thin) %|| isempty(PICS.in.neut)
+if isempty(PICS.in.B) || isempty(PICS.in.R) %|| isempty(PICS.in.neut)
     error('Could not find pics. Please ensure pictures are found in a folder names IMAGES within the folder containing the .m task file.');
 end
 
-% img_mult = STIM.totes/length(PICS.in.avg); %FOR TESTING, UPDATE WHEN ACTUAL PICS PRESENT.
-
 
 %% Fill in rest of pertinent info
-DPT = struct;
+BRC = struct;
 
-% probe: Location of probe is left (1) or right (2);
-% img: Whether Avg is on left (1) or right (2);
-% exp: Experimental (1) or control (0) trial.  If control trial (0), then 'img'
-%      dictates whether trial is avg (1) or thin (0);
-[probe, img] = BalanceTrials(80,0,[1 2],[1 2]);
-[probec, imgc] = BalanceTrials(40,0,[1 2],[1 2]);
-probe = [probe; probec];
-img = [img; imgc];
-exp = [ones(80,1); zeros(40,1)];
 
-%Make long list of randomized #s to represent each pic
-% piclist = [repmat(randperm(length(PICS.in.avg))',img_mult,1) repmat(randperm(length(PICS.in.thin))',img_mult,1)];
-piclist = [randperm(length(PICS.in.avg),120)' randperm(length(PICS.in.thin),120)'];
+picdiff = (STIM.totes/2) - length(PICS.in.B);
+if picdiff > 0;
+    piclist_B = [randperm(length(PICS.in.B))'; randi(length(PICS.in.B),picdiff,1)];
+elseif picdiff <= 0;
+    piclist_B = randperm(length(PICS.in.B),(STIM.totes/2))';
+end
+piclist_B = reshape(piclist_B,STIM.trials,STIM.blocks/2);
 
-%Concatenate these into a long list of trial types.
-% trial_types = [l_r counterprobe signal piclist];
-trial_types = [probe img exp piclist];
-shuffled = trial_types(randperm(size(trial_types,1)),:);
 
-for g = 1:STIM.blocks;
-    row = ((g-1)*STIM.trials)+1;
-    rend = row+STIM.trials - 1;
-    DPB.var.probe(1:STIM.trials,g) = shuffled(row:rend,1);
-    DPB.var.picnum_avg(1:STIM.trials,g) = shuffled(row:rend,4);
-    DPB.var.picnum_thin(1:STIM.trials,g) = shuffled(row:rend,5);
-    DPB.var.img(1:STIM.trials,g) = shuffled(row:rend,2);
-    DPB.var.exp(1:STIM.trials,g) = shuffled(row:rend,3);
+picdiff = (STIM.totes/2) - length(PICS.in.R);
+if picdiff > 0;
+    piclist_R = [randperm(length(PICS.in.R))'; randi(length(PICS.in.R),picdiff,1)];
+elseif picdiff <= 0;
+    piclist_R = randperm(length(PICS.in.R),(STIM.totes/2))';
+end
+piclist_R = reshape(piclist_R,STIM.trials,STIM.blocks/2);
+
+BRC.var.picname_B = cell(10,3);
+BRC.var.picname_R = cell(10,3);
+
+for blox = 1:STIM.blocks/2;
+    for tt = 1:STIM.trials;
+        BRC.var.picname_B{tt,blox} = PICS.in.B(piclist_B(tt,blox)).name;
+        BRC.var.picname_R{tt,blox} = PICS.in.R(piclist_R(tt,blox)).name;
+    end
 end
 
-    DPB.data.rt = zeros(STIM.trials, STIM.blocks);
-    DPB.data.correct = zeros(STIM.trials, STIM.blocks)-999;
-    DPB.data.avg_rt = zeros(STIM.blocks,1);
-    DPB.data.info.ID = ID;
-%     DPB.data.info.cond = COND;               %Condtion 1 = Food; Condition 2 = animals
-    DPB.data.info.session = SESS;
-    DPB.data.info.date = sprintf('%s %2.0f:%02.0f',date,d(4),d(5));
+%Determine if Body or Rooms go first (randomly).
+order = CoinFlip(1,.5);
+if order == 1;
+    BRC.var.order = repmat([1;0],3,1);
+else
+    BRC.var.order = repmat([0;1],3,1);
+end
+
+    BRC.var.jit = BalanceTrials(STIM.totes,1,[STIM.jit]);
+
+    BRC.data.rt = zeros(STIM.blocks,1);
+    BRC.data.anx_rate = zeros(STIM.blocks,1);
+    BRC.data.info.ID = ID;
+%     BRC.data.info.cond = COND;               %Condtion 1 = Food; Condition 2 = animals
+%     BRC.data.info.session = SESS;
+    BRC.data.info.date = sprintf('%s %2.0f:%02.0f',date,d(4),d(5));
     
-
-
 commandwindow;
-
-%%
-% %% Sound stuff.
-% wave=sin(1:0.25:1000);
-% freq=22254;  % change this to change freq of tone
-% nrchannels = size(wave,1);
-% % Default to auto-selected default output device:
-% deviceid = -1;
-% % Request latency mode 2, which used to be the best one in our measurement:
-% reqlatencyclass = 2; % class 2 empirically the best, 3 & 4 == 2
-% % Initialize driver, request low-latency preinit:
-% InitializePsychSound(1);
-% % Open audio device for low-latency output:
-% pahandle = PsychPortAudio('Open', deviceid, [], reqlatencyclass, freq, nrchannels);
 
 %%
 %change this to 0 to fill whole screen
@@ -209,3 +179,60 @@ Screen('TextFont', w, 'Arial');
 Screen('TextSize',w,30);
 
 KbName('UnifyKeyNames');
+%% Do that intro stuff.
+DrawFormattedText(w,'Instructions go here','center','center',COLORS.WHITE);
+Screen('Flip',w);
+KbWait();
+
+%% Do That trial stuff.
+for block = 1:STIM.blocks;
+    DrawPics4Block(block,BRC.var.order(block));
+    for trial = 1:STIM.trials;
+        %display pic
+        trialcount = (block-1)*10+trial;
+        BRC.data(trialcount).block = block;
+        BRC.data(trialcount).trial = trial;
+        
+        DrawFormattedText(w,'+','center','center',COLORS.WHITE);
+        Screen('Flip',w);
+        Waitsecs(BRC.var.jit);
+        
+        Screen('DrawTexture',w,PICS.out(trial).raw);
+        Screen('Flip',w);
+        WaitSecs(STIM.trialdur);
+    end
+    
+    %Ask anxiety questions
+    DrawFormattedText(w,'How anxious are you?','center','center',COLORS.WHITE);
+    
+end
+
+
+end
+
+function DrawPics4Block(block,order,varargin)
+
+global PICS BRC w
+
+switch block    %Gotta match "block" up with column 1 - 3 of the variable structure
+    case {1,3,5}
+        blk = block/2 + .5;
+    case {2,4,6}
+        blk = block/2;
+end
+
+if order == 1;  %Do Body pics
+    blocpics = BRC.var.picname_B(:,blk);
+elseif order == 0; %Do room pics
+    blocpics = BRC.var.picname_R(:,blk);
+end
+
+for j = 1:length(blocpics);
+    trialcount = (block-1)*10+j;
+    BRC.data(trialcount).picname = blocpics(j);
+  
+    PICS.out(j).raw = imread(char(blocpics(j)));
+    PICS.out(j).texture = Screen('MakeTexture',w,PICS.out(j).raw);
+end
+
+end
