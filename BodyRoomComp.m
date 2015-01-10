@@ -43,7 +43,7 @@ STIM = struct;
 STIM.blocks = 6;
 STIM.trials = 10;
 STIM.totes = STIM.blocks*STIM.trials;
-STIM.trialdur = .5;
+STIM.trialdur = 1;
 STIM.jit = [.5 .25 .1];
 
 
@@ -122,7 +122,7 @@ for blox = 1:STIM.blocks/2;
     end
 end
 
-%Determine if Body or Rooms go first (randomly).
+%Determine if Body (1) or Rooms (0) go first (randomly).
 order = CoinFlip(1,.5);
 if order == 1;
     BRC.var.order = repmat([1;0],3,1);
@@ -143,7 +143,7 @@ commandwindow;
 
 %%
 %change this to 0 to fill whole screen
-DEBUG=1;
+DEBUG=0;
 
 %set up the screen and dimensions
 
@@ -201,8 +201,8 @@ for block = 1:STIM.blocks;
     for trial = 1:STIM.trials;
         %display pic
         trialcount = (block-1)*10+trial;
-        BRC.data(trialcount).block = block;
-        BRC.data(trialcount).trial = trial;
+        BRC.data.block(trialcount) = block;
+        BRC.data.trial(trialcount) = trial;
         
         DrawFormattedText(w,'+','center','center',COLORS.WHITE);
         Screen('Flip',w);
@@ -231,7 +231,10 @@ for block = 1:STIM.blocks;
             break;
         end
     end
-    BRC.data.anx_rate(block,1) = rating;
+    block
+    rating
+
+    BRC.data.anx_rate(block) = rating;
 end
 
 
@@ -256,7 +259,7 @@ end
 
 for j = 1:length(blocpics);
     trialcount = (block-1)*10+j;
-    BRC.data(trialcount).picname = blocpics(j);
+    BRC.data.picname(trialcount) = blocpics(j);
   
     PICS.out(j).raw = imread(char(blocpics(j)));
     PICS.out(j).texture = Screen('MakeTexture',w,PICS.out(j).raw);
