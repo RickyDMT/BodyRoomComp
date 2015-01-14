@@ -6,8 +6,8 @@ function BodyRoomComp(varargin)
 
 global KEYS COLORS w wRect XCENTER YCENTER PICS STIM BRC rects mids
 
-prompt={'SUBJECT ID'};
-defAns={'4444'};
+prompt={'SUBJECT ID' 'fMRI (1 or 0)'};
+defAns={'4444' '1'};
 
 answer=inputdlg(prompt,'Please input subject info',1,defAns);
 
@@ -33,6 +33,7 @@ KEYS.NINE= KbName('9(');
 KEYS.TEN= KbName('0)');
 rangetest = cell2mat(struct2cell(KEYS));
 KEYS.all = min(rangetest):max(rangetest);
+KEYS.trigger = 52;
 
 COLORS = struct;
 COLORS.BLACK = [0 0 0];
@@ -49,6 +50,26 @@ STIM.trials = 10;
 STIM.totes = STIM.blocks*STIM.trials;
 STIM.trialdur = 1;
 STIM.jit = [1 1.5 2];
+
+%% Keyboard stuff for fMRI...
+
+%list devices
+[keyboardIndices, productNames] = GetKeyboardIndices;
+
+isxkeys=strcmp(productNames,'Xkeys');
+
+xkeys=keyboardIndices(isxkeys);
+macbook = keyboardIndices(strcmp(productNames,'Apple Internal Keyboard / Trackpad'));
+
+%in case something goes wrong or the keyboard name isn?t exactly right
+if isempty(macbook)
+    macbook=-1;
+end
+
+%in case you?re not hooked up to the scanner, then just work off the keyboard
+if isempty(xkeys)
+    xkeys=macbook;
+end
 
 
 %% Find & load in pics
@@ -115,6 +136,10 @@ end
 %     BRC.data.info.session = SESS;
     BRC.data.info.date = sprintf('%s %2.0f:%02.0f',date,d(4),d(5));
     
+    BRC.onset.fix = [];
+    BRC.onset.pic = [];
+    BRC.onset.rate = [];
+    
 commandwindow;
 
 %%
@@ -173,6 +198,18 @@ DrawFormattedText(w,'In this task, you will see a series of images.  Please focu
 Screen('Flip',w);
 KbWait();
 
+%% fMRI Synch
+
+if fmri == 1;
+    DrawFormattedText(w,'Synching with fMRI: Waiting for trigger','center','center',COLORS.WHITE);
+    Screen('Flip',w);
+    
+    scan_sec = KbTriggerWait(KEY.trigger,xkeys);
+else
+    scan_sec = GetSecs();
+end
+
+
 %% Do That trial stuff.
     %Ask initial anxiety question
     BRC.data.pre_anx_rate = AnxRate(wRect);
@@ -182,16 +219,19 @@ for block = 1:STIM.blocks;
     for trial = 1:STIM.trials;
         %display pic       
         DrawFormattedText(w,'+','center','center',COLORS.WHITE);
-        Screen('Flip',w);
+        fixon = Screen('Flip',w);
         WaitSecs(BRC.var.jit(trial,block));
+        BRC.onset.fix(trial,block) = fixon - scan_sec;
         
         Screen('DrawTexture',w,PICS.out(trial).texture,[],STIM.imgrect);
-        Screen('Flip',w);
+        picon = Screen('Flip',w);
         WaitSecs(STIM.trialdur);
+        BRC.onset.pic(trial,block) = picon - scan_sec;
     end
     
     %Ask anxiety questions
-     BRC.data.anx_rate(block) = AnxRate(wRect);
+    BRC.onset.rate(block) = GetSecs() - scan_sec; 
+    BRC.data.anx_rate(block) = AnxRate(wRect);
 end
 
 %% Save
