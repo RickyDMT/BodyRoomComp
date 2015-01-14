@@ -21,16 +21,16 @@ rng(ID); %Seed random number generator with subject ID
 d = clock;
 
 KEYS = struct;
-KEYS.ONE= KbName('1!');
-KEYS.TWO= KbName('2@');
-KEYS.THREE= KbName('3#');
-KEYS.FOUR= KbName('4$');
-KEYS.FIVE= KbName('5%');
-KEYS.SIX= KbName('6^');
-KEYS.SEVEN= KbName('7&');
-KEYS.EIGHT= KbName('8*');
-KEYS.NINE= KbName('9(');
-KEYS.TEN= KbName('0)');
+KEYS.ONE= KbName('1');
+KEYS.TWO= KbName('2');
+KEYS.THREE= KbName('3');
+KEYS.FOUR= KbName('4');
+KEYS.FIVE= KbName('5');
+KEYS.SIX= KbName('6');
+KEYS.SEVEN= KbName('7');
+KEYS.EIGHT= KbName('8');
+KEYS.NINE= KbName('9');
+KEYS.TEN= KbName('0');
 rangetest = cell2mat(struct2cell(KEYS));
 KEYS.all = min(rangetest):max(rangetest);
 KEYS.trigger = 52;
