@@ -1,34 +1,38 @@
 
 
 function BodyRoomComp(varargin)
-
+% 1/10/14: Needs fMRI synch & button box input. Depending on number of
+% buttons available, may need to update AnxRate.
 
 global KEYS COLORS w wRect XCENTER YCENTER PICS STIM BRC rects mids
 
-prompt={'SUBJECT ID' 'Condition' 'Session (1, 2, or 3)' 'Practice? 0 or 1'};
-defAns={'4444' '1' '1' '0'};
+prompt={'SUBJECT ID'};
+defAns={'4444'};
 
 answer=inputdlg(prompt,'Please input subject info',1,defAns);
 
 ID=str2double(answer{1});
-COND = str2double(answer{2});
-SESS = str2double(answer{3});
-prac = str2double(answer{4});
+% COND = str2double(answer{2});
+% SESS = str2double(answer{3});
+% prac = str2double(answer{4});
 
 
 rng(ID); %Seed random number generator with subject ID
 d = clock;
 
 KEYS = struct;
-KEYS.rt = KbName('SPACE');
-KEYS.left = KbName('c');
-KEYS.right = KbName('m');
 KEYS.ONE= KbName('1!');
 KEYS.TWO= KbName('2@');
 KEYS.THREE= KbName('3#');
 KEYS.FOUR= KbName('4$');
-KEYS.all = KEYS.ONE:KEYS.FOUR;
-
+KEYS.FIVE= KbName('5%');
+KEYS.SIX= KbName('6^');
+KEYS.SEVEN= KbName('7&');
+KEYS.EIGHT= KbName('8*');
+KEYS.NINE= KbName('9(');
+KEYS.TEN= KbName('0)');
+rangetest = cell2mat(struct2cell(KEYS));
+KEYS.all = min(rangetest):max(rangetest);
 
 COLORS = struct;
 COLORS.BLACK = [0 0 0];
@@ -44,45 +48,17 @@ STIM.blocks = 6;
 STIM.trials = 10;
 STIM.totes = STIM.blocks*STIM.trials;
 STIM.trialdur = 1;
-STIM.jit = [.5 .25 .1];
+STIM.jit = [1 1.5 2];
 
 
 %% Find & load in pics
-% [imgdir,~,~] = fileparts(which('MasterPics_PlaceHolder.m'));
-% picratefolder = fullfile(imgdir,'SavingsRatings');
-
-% try
-%     cd(picratefolder)
-% catch
-%     error('Could not find and/or open the image directory.');
-% end
-% 
-% filen = sprintf('PicRate_%03d.mat',ID);
-% try
-%     p = open(filen);
-% catch
-%     warning('Could not find and/or open the rating file.');
-%     commandwindow;
-%     randopics = input('Would you like to continue with a random selection of images? [1 = Yes, 0 = No]');
-%     if randopics == 1
-%         p = struct;
-%         p.PicRating.go = dir('Healthy*');
-%         p.PicRating.no = dir('Unhealthy*');
-%         %XXX: ADD RANDOMIZATION SO THAT SAME 80 IMAGES AREN'T CHOSEN
-%         %EVERYTIME
-%     else
-%         error('Task cannot proceed without images. Contact Erik (elk@uoregon.edu) if you have continued problems.')
-%     end
-%     
-% end
-
-% cd(imgdir);
- 
-
+[mdir,~,~] = fileparts(which('BodyRoomComp.m'));
+imgdir = [mdir filesep 'Pics'];
+cd(imgdir);
 
     % Update for appropriate pictures.
-     PICS.in.B = dir('*_T*');
-     PICS.in.R = dir('room*');
+     PICS.in.B = dir('Model*');
+     PICS.in.R = dir('Home*');
 
 %Check if pictures are present. If not, throw error.
 %Could be updated to search computer to look for pics...
@@ -188,22 +164,23 @@ KbName('UnifyKeyNames');
 [rects,mids] = DrawRectsGrid();
 
 %also, image position matters.
-STIM.imgrect = [XCENTER-330; YCENTER-330; XCENTER+330; YCENTER+330];
+side = wRect(4)/3;
+
+STIM.imgrect = [XCENTER-side; YCENTER-side; XCENTER+side; YCENTER+side];
 
 %% Do that intro stuff.
-DrawFormattedText(w,'Instructions go here','center','center',COLORS.WHITE);
+DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.','center','center',COLORS.WHITE,60,[],[],1.5);
 Screen('Flip',w);
 KbWait();
 
 %% Do That trial stuff.
+    %Ask initial anxiety question
+    BRC.data.pre_anx_rate = AnxRate(wRect);
+
 for block = 1:STIM.blocks;
     DrawPics4Block(block,BRC.var.order(block));
     for trial = 1:STIM.trials;
-        %display pic
-        trialcount = (block-1)*10+trial;
-        BRC.data.block(trialcount) = block;
-        BRC.data.trial(trialcount) = trial;
-        
+        %display pic       
         DrawFormattedText(w,'+','center','center',COLORS.WHITE);
         Screen('Flip',w);
         WaitSecs(BRC.var.jit(trial,block));
@@ -214,32 +191,75 @@ for block = 1:STIM.blocks;
     end
     
     %Ask anxiety questions
-    DrawFormattedText(w,'How anxious are you?','center','center',COLORS.WHITE);
+     BRC.data.anx_rate(block) = AnxRate(wRect);
+end
+
+%% Save
+
+savedir = [mdir filesep 'Results' filesep];
+cd(savedir)
+savename = ['SocialComp_' num2str(ID) '.mat'];
+
+if exist(savename,'file')==2;
+    savename = ['SocialComp_' num2str(ID) '_' sprintf('%s_%2.0f%02.0f',date,d(4),d(5)) '.mat'];
+end
+
+try
+save([savedir savename],'BRC');
+catch
+    warning('Something is amiss with this save. Retrying to save in a more general location...');
+    try
+        save([mdir filesep savename],'BRC');
+    catch
+        warning('STILL problems saving....Try right-clicking on ''AAM'' and Save as...');
+        BRC
+    end
+end
+
+
+
+%% The End!
+
+DrawFormattedText(w,'Thank you for your responses. This task is now complete. Please notify the assessor.','center','center',COLORS.WHITE,60,[],[],1.5);
+Screen('Flip',w);
+KbWait();
+
+sca
+
+
+end
+
+function [anxiety] = AnxRate(wRect,varargin)
+
+global w COLORS KEYS
+
+anxtext = 'Please rate your current level of anxiety:';
+ %Ask initial anxiety question
+    DrawFormattedText(w,anxtext,wRect(3)/4,'center',COLORS.WHITE);
     drawRatings();
     Screen('Flip',w);
     
     while 1
         [keyisdown, ~, keycode] = KbCheck();
         if keyisdown==1 && any(keycode(KEYS.all))
-            rating = KbName(find(keycode));
-            rating = str2double(rating(1));
-            
-            DrawFormattedText(w,'How anxious are you?','center','center',COLORS.WHITE);
+            rating = KbName(find(keycode));           
+            DrawFormattedText(w,anxtext,wRect(3)/4,'center',COLORS.WHITE);
             drawRatings(rating);
             Screen('Flip',w);
             WaitSecs(.25);
             break;
         end
     end
-    block
-    rating
+    
+    rating = str2double(rating(1));
+    if rating == 0; %Zero key is used for 10. Thus check and correct for when they press 0.
+        rating = 10;
+    end
+    
+    anxiety = rating;
 
-    BRC.data.anx_rate(block) = rating;
+
 end
-
-
-end
-
 function DrawPics4Block(block,order,varargin)
 
 global PICS BRC w
@@ -258,8 +278,7 @@ elseif order == 0; %Do room pics
 end
 
 for j = 1:length(blocpics);
-    trialcount = (block-1)*10+j;
-    BRC.data.picname(trialcount) = blocpics(j);
+    BRC.data.picname(j,block) = blocpics(j);
   
     PICS.out(j).raw = imread(char(blocpics(j)));
     PICS.out(j).texture = Screen('MakeTexture',w,PICS.out(j).raw);
@@ -277,8 +296,8 @@ global wRect XCENTER
 %of screen is determined. Then, images are 1/4th the side of that square
 %(minus the 3 x the gap between images.
 
-num_rects = 4;                 %How many rects?
-xlen = wRect(3)*.5;           %Make area covering about 50% of vertical dimension of screen.
+num_rects = 10;                 %How many rects?
+xlen = wRect(3)*.8;           %Make area covering about 80% of vertical dimension of screen.
 gap = 20;                       %Gap size between each rect
 square_side = fix((xlen - (num_rects-1)*gap)/num_rects); %Size of rect depends on size of screen.
 
@@ -305,7 +324,7 @@ function drawRatings(varargin)
 
 global w KEYS COLORS rects mids
 
-colors=repmat(COLORS.WHITE',1,4);
+colors=repmat(COLORS.WHITE',1,10);
 % rects=horzcat(allRects.rate1rect',allRects.rate2rect',allRects.rate3rect',allRects.rate4rect');
 
 %Needs to feed in "code" from KbCheck, to show which key was chosen.
@@ -314,10 +333,10 @@ if nargin >= 1 && ~isempty(varargin{1})
     
     key=find(response);
     if length(key)>1
-        key=key(1);
+        response=response(1);
     end;
     
-    switch key
+    switch response
         
         case {KEYS.ONE}
             choice=1;
@@ -327,18 +346,18 @@ if nargin >= 1 && ~isempty(varargin{1})
             choice=3;
         case {KEYS.FOUR}
             choice=4;
-%         case {KEYS.FIVE}
-%             choice=5;
-%         case {KEYS.SIX}
-%             choice=6;
-%         case {KEYS.SEVEN}
-%             choice=7;
-%         case {KEYS.EIGHT}
-%             choice=8;
-%         case {KEYS.NINE}
-%             choice=9;
-%         case {KEYS.TEN}
-%             choice = 10;
+        case {KEYS.FIVE}
+            choice=5;
+        case {KEYS.SIX}
+            choice=6;
+        case {KEYS.SEVEN}
+            choice=7;
+        case {KEYS.EIGHT}
+            choice=8;
+        case {KEYS.NINE}
+            choice=9;
+        case {KEYS.TEN}
+            choice = 10;
     end
     
     if exist('choice','var')
@@ -350,36 +369,14 @@ if nargin >= 1 && ~isempty(varargin{1})
 end
 
 
-    
-%     window=w;
-
-   
-
-Screen('TextFont', w, 'Arial');
-Screen('TextStyle', w, 1);
-oldSize = Screen('TextSize',w,35);
-
-% Screen('TextFont', w2, 'Arial');
-% Screen('TextStyle', w2, 1)
-% Screen('TextSize',w2,60);
-
-
-
 %draw all the squares
 Screen('FrameRect',w,colors,rects,1);
 
-
-% Screen('FrameRect',w2,colors,rects,1);
-
-
-%draw the text (1-4)
-for n = 1:4;
+%draw the text (1-10)
+for n = 1:10;
     numnum = sprintf('%d',n);
-    CenterTextOnPoint(w,numnum,mids(1,n),mids(2,n),COLORS.WHITE);
+    CenterTextOnPoint(w,numnum,mids(1,n),mids(2,n),colors(:,n));
 end
-
-
-Screen('TextSize',w,oldSize);
 
 end
 
