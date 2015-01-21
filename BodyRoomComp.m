@@ -1,10 +1,6 @@
-
-
 function BodyRoomComp(varargin)
-% 1/10/14: Needs fMRI synch & button box input. Depending on number of
-% buttons available, may need to update AnxRate.
 
-global KEYS COLORS w wRect XCENTER YCENTER PICS STIM BRC rects mids
+global KEYS COLORS w wRect XCENTER YCENTER PICS STIM BRC rects mids scan_sec block
 
 prompt={'SUBJECT ID' 'fMRI (1 or 0)'};
 defAns={'4444' '1'};
@@ -12,6 +8,7 @@ defAns={'4444' '1'};
 answer=inputdlg(prompt,'Please input subject info',1,defAns);
 
 ID=str2double(answer{1});
+fmri =str2double(answer{2});
 % COND = str2double(answer{2});
 % SESS = str2double(answer{3});
 % prac = str2double(answer{4});
@@ -20,20 +17,35 @@ ID=str2double(answer{1});
 rng(ID); %Seed random number generator with subject ID
 d = clock;
 
+KbName('UnifyKeyNames');
+
 KEYS = struct;
-KEYS.ONE= KbName('1');
-KEYS.TWO= KbName('2');
-KEYS.THREE= KbName('3');
-KEYS.FOUR= KbName('4');
-KEYS.FIVE= KbName('5');
-KEYS.SIX= KbName('6');
-KEYS.SEVEN= KbName('7');
-KEYS.EIGHT= KbName('8');
-KEYS.NINE= KbName('9');
-KEYS.TEN= KbName('0');
+if fmri == 1;
+    KEYS.ONE= KbName('0)');
+    KEYS.TWO= KbName('1!');
+    KEYS.THREE= KbName('2@');
+    KEYS.FOUR= KbName('3#');
+    KEYS.FIVE= KbName('4$');
+    KEYS.SIX= KbName('5%');
+    KEYS.SEVEN= KbName('6^');
+    KEYS.EIGHT= KbName('7&');
+    KEYS.NINE= KbName('8*');
+    % KEYS.TEN= KbName('0)');
+else
+    KEYS.ONE= KbName('1!');
+    KEYS.TWO= KbName('2@');
+    KEYS.THREE= KbName('3#');
+    KEYS.FOUR= KbName('4$');
+    KEYS.FIVE= KbName('5%');
+    KEYS.SIX= KbName('6^');
+    KEYS.SEVEN= KbName('7&');
+    KEYS.EIGHT= KbName('8*');
+    KEYS.NINE= KbName('9(');
+end
+
 rangetest = cell2mat(struct2cell(KEYS));
 KEYS.all = min(rangetest):max(rangetest);
-KEYS.trigger = 52;
+KEYS.trigger = KbName('''"');
 
 COLORS = struct;
 COLORS.BLACK = [0 0 0];
@@ -49,7 +61,7 @@ STIM.blocks = 6;
 STIM.trials = 10;
 STIM.totes = STIM.blocks*STIM.trials;
 STIM.trialdur = 1;
-STIM.jit = [1 1.5 2];
+STIM.jit = [2 3 4];
 
 %% Keyboard stuff for fMRI...
 
@@ -150,7 +162,7 @@ DEBUG=0;
 
 %list all the screens, then just pick the last one in the list (if you have
 %only 1 monitor, then it just chooses that one)
-Screen('Preference', 'SkipSyncTests', 1);
+%Screen('Preference', 'SkipSyncTests', 1);
 
 screenNumber=max(Screen('Screens'));
 
@@ -184,7 +196,7 @@ Screen('TextFont', w, 'Arial');
 %Screen('TextStyle', w, 1);
 Screen('TextSize',w,30);
 
-KbName('UnifyKeyNames');
+
 %% Dat Grid
 [rects,mids] = DrawRectsGrid();
 
@@ -193,10 +205,6 @@ side = wRect(4)/3;
 
 STIM.imgrect = [XCENTER-side; YCENTER-side; XCENTER+side; YCENTER+side];
 
-%% Do that intro stuff.
-DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.','center','center',COLORS.WHITE,60,[],[],1.5);
-Screen('Flip',w);
-KbWait();
 
 %% fMRI Synch
 
@@ -204,11 +212,15 @@ if fmri == 1;
     DrawFormattedText(w,'Synching with fMRI: Waiting for trigger','center','center',COLORS.WHITE);
     Screen('Flip',w);
     
-    scan_sec = KbTriggerWait(KEY.trigger,xkeys);
+    scan_sec = KbTriggerWait(KEYS.trigger,xkeys);
 else
     scan_sec = GetSecs();
 end
 
+%% Do that intro stuff.
+DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.\n\nPress any key to continue.','center','center',COLORS.WHITE,60,[],[],1.5);
+Screen('Flip',w);
+KbWait();
 
 %% Do That trial stuff.
     %Ask initial anxiety question
@@ -230,8 +242,8 @@ for block = 1:STIM.blocks;
     end
     
     %Ask anxiety questions
-    BRC.onset.rate(block) = GetSecs() - scan_sec; 
-    BRC.data.anx_rate(block) = AnxRate(wRect);
+     
+    BRC.data.anx_rate(block,fmri) = AnxRate(wRect);
 end
 
 %% Save
@@ -269,21 +281,22 @@ sca
 
 end
 
-function [anxiety] = AnxRate(wRect,varargin)
+function [anxiety] = AnxRate(wRect,fmri,varargin)
 
-global w COLORS KEYS
+global w COLORS KEYS BRC scan_sec block
 
 anxtext = 'Please rate your current level of anxiety:';
  %Ask initial anxiety question
-    DrawFormattedText(w,anxtext,wRect(3)/4,'center',COLORS.WHITE);
+    DrawFormattedText(w,anxtext,'center','center',COLORS.WHITE);
     drawRatings();
-    Screen('Flip',w);
+    anxon = Screen('Flip',w);
+    BRC.onset.rate(block) = anxon - scan_sec;
     
     while 1
         [keyisdown, ~, keycode] = KbCheck();
         if keyisdown==1 && any(keycode(KEYS.all))
             rating = KbName(find(keycode));           
-            DrawFormattedText(w,anxtext,wRect(3)/4,'center',COLORS.WHITE);
+            DrawFormattedText(w,anxtext,'center','center',COLORS.WHITE);
             drawRatings(rating);
             Screen('Flip',w);
             WaitSecs(.25);
@@ -292,8 +305,9 @@ anxtext = 'Please rate your current level of anxiety:';
     end
     
     rating = str2double(rating(1));
-    if rating == 0; %Zero key is used for 10. Thus check and correct for when they press 0.
-        rating = 10;
+
+    if fmri ==1;
+        rating = rating + 1;
     end
     
     anxiety = rating;
@@ -336,7 +350,7 @@ global wRect XCENTER
 %of screen is determined. Then, images are 1/4th the side of that square
 %(minus the 3 x the gap between images.
 
-num_rects = 10;                 %How many rects?
+num_rects = 9;                 %How many rects?
 xlen = wRect(3)*.8;           %Make area covering about 80% of vertical dimension of screen.
 gap = 20;                       %Gap size between each rect
 square_side = fix((xlen - (num_rects-1)*gap)/num_rects); %Size of rect depends on size of screen.
@@ -364,7 +378,7 @@ function drawRatings(varargin)
 
 global w KEYS COLORS rects mids
 
-colors=repmat(COLORS.WHITE',1,10);
+colors=repmat(COLORS.WHITE',1,9);
 % rects=horzcat(allRects.rate1rect',allRects.rate2rect',allRects.rate3rect',allRects.rate4rect');
 
 %Needs to feed in "code" from KbCheck, to show which key was chosen.
@@ -396,8 +410,8 @@ if nargin >= 1 && ~isempty(varargin{1})
             choice=8;
         case {KEYS.NINE}
             choice=9;
-        case {KEYS.TEN}
-            choice = 10;
+%         case {KEYS.TEN}
+%             choice = 10;
     end
     
     if exist('choice','var')
@@ -412,8 +426,8 @@ end
 %draw all the squares
 Screen('FrameRect',w,colors,rects,1);
 
-%draw the text (1-10)
-for n = 1:10;
+%draw the text (1-9)
+for n = 1:9;
     numnum = sprintf('%d',n);
     CenterTextOnPoint(w,numnum,mids(1,n),mids(2,n),colors(:,n));
 end
