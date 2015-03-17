@@ -206,6 +206,22 @@ side = wRect(4)/3;
 STIM.imgrect = [XCENTER-side; YCENTER-side; XCENTER+side; YCENTER+side];
 
 
+%% Do that intro stuff.
+DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.\n\nPress any key to continue.','center','center',COLORS.WHITE,60,[],[],1.5);
+Screen('Flip',w);
+% KbWait();
+FlushEvents();
+while 1
+    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
+    if pracDown == 1 && any(pracCode(KEY.all))
+        break
+    end
+end
+
+
+Screen('Flip',w);
+WaitSecs(1);
+
 %% fMRI Synch
 
 if fmri == 1;
@@ -216,20 +232,6 @@ if fmri == 1;
 else
     scan_sec = GetSecs();
 end
-
-%% Do that intro stuff.
-DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.\n\nPress any key to continue.','center','center',COLORS.WHITE,60,[],[],1.5);
-Screen('Flip',w);
-% KbWait();
-while 1
-    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
-    if pracDown == 1 && any(pracCode(KEYS.all))
-        break
-    end
-end
-
-Screen('Flip',w);
-WaitSecs(1);
 
 
 %% Do That trial stuff.
