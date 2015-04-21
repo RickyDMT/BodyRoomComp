@@ -30,6 +30,7 @@ if fmri == 1;
     KEYS.SEVEN= KbName('6^');
     KEYS.EIGHT= KbName('7&');
     KEYS.NINE= KbName('8*');
+    % KEYS.TEN= KbName('0)');
 else
     KEYS.ONE= KbName('1!');
     KEYS.TWO= KbName('2@');
@@ -45,7 +46,7 @@ end
 rangetest = cell2mat(struct2cell(KEYS));
 % KEYS.all = min(rangetest):max(rangetest);
 KEYS.all = rangetest;
-KEYS.trigger = KbName('''"');
+KEYS.trigger = KbName('''');
 
 COLORS = struct;
 COLORS.BLACK = [0 0 0];
@@ -206,22 +207,6 @@ side = wRect(4)/3;
 STIM.imgrect = [XCENTER-side; YCENTER-side; XCENTER+side; YCENTER+side];
 
 
-%% Do that intro stuff.
-DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.\n\nPress any key to continue.','center','center',COLORS.WHITE,60,[],[],1.5);
-Screen('Flip',w);
-% KbWait();
-FlushEvents();
-while 1
-    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
-    if pracDown == 1 && any(pracCode(KEY.all))
-        break
-    end
-end
-
-
-Screen('Flip',w);
-WaitSecs(1);
-
 %% fMRI Synch
 
 if fmri == 1;
@@ -233,10 +218,24 @@ else
     scan_sec = GetSecs();
 end
 
+%% Do that intro stuff.
+DrawFormattedText(w,'In this task, you will see a series of images.  Please focus carefully on each photo that is displayed.  You will be asked to rate your anxiety in between blocks of photos.\n\nPress any key to continue.','center','center',COLORS.WHITE,60,[],[],1.5);
+Screen('Flip',w);
+% KbWait();
+FlushEvents();
+while 1
+    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
+    if pracDown == 1 && any(pracCode(KEYS.all))
+        break
+    end
+end
 
+
+Screen('Flip',w);
+WaitSecs(1);
 %% Do That trial stuff.
     %Ask initial anxiety question
-    BRC.data.pre_anx_rate = AnxRate(wRect,fmri);
+    BRC.data.pre_anx_rate = AnxRate(fmri);
 
 for block = 1:STIM.blocks;
     DrawPics4Block(block,BRC.var.order(block));
@@ -255,13 +254,13 @@ for block = 1:STIM.blocks;
     
     %Ask anxiety questions
      
-    BRC.data.anx_rate(block) = AnxRate(wRect,fmri);
+    BRC.data.anx_rate(block) = AnxRate(fmri);
 end
 
 %% Save
 
 savedir = [mdir filesep 'Results' filesep];
-cd(savedir)
+% cd(savedir)
 savename = ['SocialComp_' num2str(ID) '.mat'];
 
 if exist(savename,'file')==2;
@@ -284,16 +283,23 @@ end
 
 %% The End!
 
-DrawFormattedText(w,'Thank you for your responses. This task is now complete. Please notify the assessor.','center','center',COLORS.WHITE,60,[],[],1.5);
+DrawFormattedText(w,'Thank you for your responses. This task is now complete. The assessor will be with you shortly.','center','center',COLORS.WHITE,60,[],[],1.5);
 Screen('Flip',w);
-KbWait();
+FlushEvents();
+while 1
+    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
+    if pracDown == 1 && any(pracCode(KEYS.all))
+        break
+    end
+end
+
 
 sca
 
 
 end
 
-function [anxiety] = AnxRate(wRect,fmri,varargin)
+function [anxiety] = AnxRate(fmri_adj,varargin)
 
 global w COLORS KEYS BRC scan_sec block
 
@@ -317,16 +323,16 @@ anxtext = 'Please rate your current level of anxiety:';
     end
     
     rating = str2double(rating(1));
-
-    if fmri ==1;
+    
+    if fmri_adj == 1;
         rating = rating + 1;
     end
-    
+
+   
     anxiety = rating;
 
 
 end
-
 function DrawPics4Block(block,order,varargin)
 
 global PICS BRC w
@@ -400,10 +406,10 @@ if nargin >= 1 && ~isempty(varargin{1})
     
     key=find(response);
     if length(key)>1
-        response=response(1);
+        key=key(1);
     end;
     
-    switch response
+    switch key
         
         case {KEYS.ONE}
             choice=1;
