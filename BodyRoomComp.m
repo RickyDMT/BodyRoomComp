@@ -2,25 +2,25 @@ function BodyRoomComp(varargin)
 
 global KEYS COLORS w wRect XCENTER YCENTER PICS STIM BRC rects mids scan_sec block
 
-prompt={'SUBJECT ID' 'fMRI (1 or 0)'};
-defAns={'4444' '1'};
+prompt={'SUBJECT ID' 'Session' 'fMRI (1 or 0)'};
+defAns={'4444' '1' '1'};
 
 answer=inputdlg(prompt,'Please input subject info',1,defAns);
 
 ID=str2double(answer{1});
-fmri =str2double(answer{2});
+fmri =str2double(answer{3});
 % COND = str2double(answer{2});
-% SESS = str2double(answer{3});
+SESS = str2double(answer{2});
 % prac = str2double(answer{4});
 
 
-rng(ID); %Seed random number generator with subject ID
+rng(ID*SESS); %Seed random number generator with subject ID
 d = clock;
 
 KbName('UnifyKeyNames');
 
 KEYS = struct;
-if fmri == 1;
+if fmri == 1;   %If you are in the scanner
     KEYS.ONE= KbName('0)');
     KEYS.TWO= KbName('1!');
     KEYS.THREE= KbName('2@');
@@ -31,7 +31,7 @@ if fmri == 1;
     KEYS.EIGHT= KbName('7&');
     KEYS.NINE= KbName('8*');
     % KEYS.TEN= KbName('0)');
-else
+else            %You are not in the scanner.
     KEYS.ONE= KbName('1!');
     KEYS.TWO= KbName('2@');
     KEYS.THREE= KbName('3#');
@@ -148,6 +148,7 @@ end
 %     BRC.data.info.cond = COND;               %Condtion 1 = Food; Condition 2 = animals
 %     BRC.data.info.session = SESS;
     BRC.data.info.date = sprintf('%s %2.0f:%02.0f',date,d(4),d(5));
+    BRC.data.info.Session = SESS;
     
     BRC.onset.fix = [];
     BRC.onset.pic = [];
@@ -223,12 +224,17 @@ DrawFormattedText(w,'In this task, you will see a series of images.  Please focu
 Screen('Flip',w);
 % KbWait();
 FlushEvents();
-while 1
-    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
-    if pracDown == 1 && any(pracCode(KEYS.all))
-        break
+if fmri == 1;
+    while 1
+        [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
+        if pracDown == 1 && any(pracCode(KEYS.all))
+            break
+        end
     end
+else
+    KbWait();
 end
+
 
 
 Screen('Flip',w);
@@ -236,6 +242,10 @@ WaitSecs(1);
 %% Do That trial stuff.
     %Ask initial anxiety question
     BRC.data.pre_anx_rate = AnxRate(fmri);
+    
+    %Added a Flip so that it doesn't hang on the anxiety rating while it
+    %draws pics for the block.
+    Screen('Flip',w);
 
 for block = 1:STIM.blocks;
     DrawPics4Block(block,BRC.var.order(block));
@@ -255,6 +265,8 @@ for block = 1:STIM.blocks;
     %Ask anxiety questions
      
     BRC.data.anx_rate(block) = AnxRate(fmri);
+    
+    Screen('Flip',w);
 end
 
 %% Save
@@ -286,13 +298,16 @@ end
 DrawFormattedText(w,'Thank you for your responses. This task is now complete. The assessor will be with you shortly.','center','center',COLORS.WHITE,60,[],[],1.5);
 Screen('Flip',w);
 FlushEvents();
-while 1
-    [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
-    if pracDown == 1 && any(pracCode(KEYS.all))
-        break
+if fmri == 1;
+    while 1
+        [pracDown, ~, pracCode] = KbCheck(); %waits for R or L index button to be pressed
+        if pracDown == 1 && any(pracCode(KEYS.all))
+            break
+        end
     end
+else
+    KbWait();
 end
-
 
 sca
 
@@ -315,7 +330,7 @@ anxtext = 'Please rate your current level of anxiety:';
         if keyisdown==1 && any(keycode(KEYS.all))
             rating = KbName(find(keycode));           
             DrawFormattedText(w,anxtext,'center','center',COLORS.WHITE);
-            drawRatings(rating);
+            drawRatings(keycode);
             Screen('Flip',w);
             WaitSecs(.25);
             break;
